@@ -1,0 +1,157 @@
+{
+  "generated_at": 1754887857,
+  "findings": [
+    {
+      "severity": "INFO",
+      "type": "web.fingerprint",
+      "target": "192.168.1.254:80",
+      "message": "Server=lighttpd/1.4.69; X-Powered-By=n/a; Title=Status",
+      "recommendation": "Harden identified stack; keep software up to date.",
+      "meta": null
+    },
+    {
+      "severity": "LOW",
+      "type": "web.missing_header",
+      "target": "192.168.1.254:80",
+      "message": "Missing security header: Content-Security-Policy",
+      "recommendation": "Set the Content-Security-Policy header. See OWASP Secure Headers Project for safe defaults.",
+      "meta": null
+    },
+    {
+      "severity": "LOW",
+      "type": "web.missing_header",
+      "target": "192.168.1.254:80",
+      "message": "Missing security header: Referrer-Policy",
+      "recommendation": "Set the Referrer-Policy header. See OWASP Secure Headers Project for safe defaults.",
+      "meta": null
+    },
+    {
+      "severity": "LOW",
+      "type": "web.missing_header",
+      "target": "192.168.1.254:80",
+      "message": "Missing security header: Permissions-Policy",
+      "recommendation": "Set the Permissions-Policy header. See OWASP Secure Headers Project for safe defaults.",
+      "meta": null
+    },
+    {
+      "severity": "LOW",
+      "type": "web.no_https_redirect",
+      "target": "192.168.1.254:80",
+      "message": "HTTP does not redirect to HTTPS",
+      "recommendation": "Enforce HTTP->HTTPS redirect (301/302) for all requests.",
+      "meta": null
+    },
+    {
+      "severity": "LOW",
+      "type": "web.sensitive_path",
+      "target": "192.168.1.254:80",
+      "message": "Accessible path / returned 200 (text/html)",
+      "recommendation": "Restrict access, remove from web root, or protect with strong authentication.",
+      "meta": null
+    },
+    {
+      "severity": "INFO",
+      "type": "web.robots_missing",
+      "target": "192.168.1.254:80",
+      "message": "robots.txt missing or not accessible",
+      "recommendation": "Optional: add robots.txt to control indexing.",
+      "meta": null
+    },
+    {
+      "severity": "INFO",
+      "type": "web.security_txt_missing",
+      "target": "192.168.1.254:80",
+      "message": "No security.txt found",
+      "recommendation": "Consider publishing a security.txt with contact/policy details.",
+      "meta": null
+    },
+    {
+      "severity": "INFO",
+      "type": "tls.protocol",
+      "target": "192.168.1.254:443",
+      "message": "Negotiated TLS 1.3",
+      "recommendation": "Good protocol level.",
+      "meta": null
+    },
+    {
+      "severity": "INFO",
+      "type": "tls.no_certificate",
+      "target": "192.168.1.254:443",
+      "message": "Peer did not present a certificate (or it could not be parsed)",
+      "recommendation": "Ensure the server presents a valid certificate chain.",
+      "meta": null
+    },
+    {
+      "severity": "INFO",
+      "type": "web.fingerprint",
+      "target": "192.168.1.254:443",
+      "message": "Server=lighttpd/1.4.69; X-Powered-By=n/a; Title=Status",
+      "recommendation": "Harden identified stack; keep software up to date.",
+      "meta": null
+    },
+    {
+      "severity": "LOW",
+      "type": "web.missing_header",
+      "target": "192.168.1.254:443",
+      "message": "Missing security header: Content-Security-Policy",
+      "recommendation": "Set the Content-Security-Policy header. See OWASP Secure Headers Project for safe defaults.",
+      "meta": null
+    },
+    {
+      "severity": "LOW",
+      "type": "web.missing_header",
+      "target": "192.168.1.254:443",
+      "message": "Missing security header: Referrer-Policy",
+      "recommendation": "Set the Referrer-Policy header. See OWASP Secure Headers Project for safe defaults.",
+      "meta": null
+    },
+    {
+      "severity": "LOW",
+      "type": "web.missing_header",
+      "target": "192.168.1.254:443",
+      "message": "Missing security header: Permissions-Policy",
+      "recommendation": "Set the Permissions-Policy header. See OWASP Secure Headers Project for safe defaults.",
+      "meta": null
+    },
+    {
+      "severity": "INFO",
+      "type": "web.hsts_present",
+      "target": "192.168.1.254:443",
+      "message": "Strict-Transport-Security is present",
+      "recommendation": "Ensure max-age is sufficiently long and includeSubDomains if applicable.",
+      "meta": null
+    },
+    {
+      "severity": "LOW",
+      "type": "web.sensitive_path",
+      "target": "192.168.1.254:443",
+      "message": "Accessible path / returned 200 (text/html)",
+      "recommendation": "Restrict access, remove from web root, or protect with strong authentication.",
+      "meta": null
+    },
+    {
+      "severity": "INFO",
+      "type": "web.robots_missing",
+      "target": "192.168.1.254:443",
+      "message": "robots.txt missing or not accessible",
+      "recommendation": "Optional: add robots.txt to control indexing.",
+      "meta": null
+    },
+    {
+      "severity": "INFO",
+      "type": "web.security_txt_missing",
+      "target": "192.168.1.254:443",
+      "message": "No security.txt found",
+      "recommendation": "Consider publishing a security.txt with contact/policy details.",
+      "meta": null
+    },
+    {
+      "severity": "MEDIUM",
+      "type": "dns.recursion_enabled",
+      "target": "192.168.1.254:53",
+      "message": "DNS server performs recursion for external queries",
+      "recommendation": "Disable open recursion or restrict to internal clients only.",
+      "meta": null
+    }
+  ]
+}
