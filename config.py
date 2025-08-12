@@ -1,41 +1,43 @@
+# config.py
+# Central configuration for Cyberscanner
+
 from dataclasses import dataclass, field
 from typing import List
 
 
+# Preset port profiles for convenience
+PROFILES = {
+    # Focused on web and common alt ports
+    "web": [80, 443, 8080, 8443, 3000],
+    # Common Windows services
+    "windows": [135, 139, 445, 3389, 5985, 5986],
+    # Consumer/home router-ish services (mgmt, UPnP, web)
+    "home-router": [53, 80, 443, 1900, 5000, 5001, 8080, 8443],
+    # Small, practical set to keep scans fast
+    "top20": [
+        21, 22, 23, 25, 53, 67, 68, 80, 110, 123,
+        135, 139, 143, 389, 443, 445, 3389, 5000, 8080, 8443
+    ],
+}
+
+
 @dataclass
 class ScanConfig:
-    # Networking
-    connect_timeout: float = 1.0
-    service_timeout: float = 3.0
-    http_timeout: float = 4.0
-    http_retries: int = 1
-    user_agent: str = "SecUtil/1.2 (+local scan)"
+    # Defaults you can tune
+    default_ports: List[int] = field(default_factory=lambda: [22, 80, 443, 445, 3389, 8080, 8443, 3000])
 
-    # Scanning
-    default_ports: List[int] = field(default_factory=lambda: [
-        21, 22, 23, 25, 53, 80, 110, 143, 443, 445, 587, 993, 995, 161, 3389
-    ])
-    max_workers: int = 200
+    # Timeouts (seconds)
+    connect_timeout: float = 1.5
+    service_timeout: float = 1.5
+    http_timeout: float = 2.5
 
-    # Web checks
-    sensitive_paths: List[str] = field(default_factory=lambda: [
-        "/", "/.git/", "/.env", "/.git/config", "/.svn/entries", "/.hg/",
-        "/admin/", "/uploads/", "/backup.zip", "/backups/", "/config.php",
-        "/server-status?auto", "/server-status", "/phpinfo.php", "/actuator",
-        "/console", "/manager/html", "/.DS_Store"
-    ])
-    security_headers_expected: List[str] = field(default_factory=lambda: [
-        "Strict-Transport-Security",
-        "Content-Security-Policy",
-        "X-Frame-Options",
-        "X-Content-Type-Options",
-        "Referrer-Policy",
-        "Permissions-Policy",
-    ])
-    max_sensitive_paths: int = 20
+    # Concurrency/workers (global cap used by scanner)
+    max_workers: int = 100
 
-    # Reporting
-    colorize: bool = True
+    # Report outputs; text/json usually auto-saved; html saved when user requests
     save_text_path: str = "scan_report.txt"
     save_json_path: str = "scan_report.json"
-    save_html_path: str | None = None  # e.g., "scan_report.html"
+    save_html_path: str | None = None
+
+    # Version/meta (optional)
+    version: str = "2.1.0"
