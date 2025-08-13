@@ -1,2 +1,17 @@
+== Cyberscanner Report ==
+Generated (UTC): 2025-08-13T07:44:59.510796Z
 
---- Vulnerability Report (colorized) ---
+Open Ports by Host:
+  - 192.168.1.254: 80, 443
+
+Findings:
+- [Info] 192.168.1.254:443 (tls) — Negotiated protocol: TLSv1.3
+    Fix: Ensure TLS 1.2+ is used whenever possible.
+- [High] 192.168.1.254:443 (tls) — Server accepts TLS 1.0 (obsolete)
+    Fix: Disable TLS 1.0. Prefer TLS 1.2+
+- [High] 192.168.1.254:443 (tls) — Server accepts TLS 1.1 (obsolete)
+    Fix: Disable TLS 1.1. Prefer TLS 1.2+
+- [Info] 192.168.1.254:80 (web) — Web service unreachable: ReadTimeout
+    Fix: Ensure the service is reachable and not blocking requests.
+- [Info] 192.168.1.254:443 (web) — Web service unreachable: ReadTimeout
+    Fix: Ensure the service is reachable and not blocking requests.

@@ -1,2 +1,4 @@
 # targets.txt
-put your own ips bruh
+192.168.1.254
+192.168.1.10-20
+192.168.1.0/28

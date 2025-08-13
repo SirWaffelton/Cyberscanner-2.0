@@ -1,51 +1,90 @@
+# scanner.py
+# Target parsing and TCP connect port scanning
+
+from __future__ import annotations
+import concurrent.futures
 import ipaddress
+import os
 import socket
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Callable, Iterable, List, Optional, Set
+from typing import Callable, Iterable, List, Optional
+
+
+def _expand_range_token(token: str) -> List[str]:
+    # Supports a.b.c.start-end (e.g., 192.168.1.10-20)
+    try:
+        head, tail = token.rsplit(".", 1)
+        start_s, end_s = tail.split("-", 1)
+        start = int(start_s)
+        end = int(end_s)
+        if not (0 <= start <= 255 and 0 <= end <= 255) or end < start:
+            return []
+        base = head + "."
+        return [f"{base}{i}" for i in range(start, end + 1)]
+    except Exception:
+        return []
+
+
+def _expand_token(token: str) -> List[str]:
+    token = token.strip()
+    if not token:
+        return []
+    # CIDR
+    try:
+        net = ipaddress.ip_network(token, strict=False)
+        return [str(ip) for ip in net.hosts()]
+    except Exception:
+        pass
+    # Range a.b.c.start-end
+    rng = _expand_range_token(token)
+    if rng:
+        return rng
+    # Single IP
+    try:
+        ipaddress.ip_address(token)
+        return [token]
+    except Exception:
+        pass
+    return []
 
 
 def parse_targets(spec: str) -> List[str]:
     """
-    Accepts:
-      - Single IP: 192.168.1.10
-      - CIDR: 192.168.1.0/24
-      - Range: 192.168.1.10-20
-      - File: file:targets.txt (one IP/CIDR/range per line)
+    Parse:
+      - single IP, CIDR, a.b.c.start-end
+      - file:targets.txt (each line can itself be any of the above)
     """
-    targets: Set[str] = set()
-
-    def add_range(base: str, start: int, end: int):
-        for last in range(start, end + 1):
-            targets.add(".".join(base.split(".")[:3] + [str(last)]))
-
-    if spec.startswith("file:"):
-        path = spec[5:]
+    spec = spec.strip()
+    targets: List[str] = []
+    if spec.lower().startswith("file:"):
+        path = spec.split(":", 1)[1]
+        path = os.path.abspath(path)
+        if not os.path.exists(path):
+            raise ValueError(f"Targets file not found: {path}")
         with open(path, "r", encoding="utf-8") as f:
-            lines = [ln.strip() for ln in f if ln.strip() and not ln.strip().startswith("#")]
-        for line in lines:
-            targets.update(parse_targets(line))
-        return sorted(targets)
-
-    if "-" in spec and "/" not in spec:
-        base, rng = spec.rsplit(".", 1)
-        start, end = rng.split("-")
-        add_range(base + ".", int(start), int(end))
-    elif "/" in spec:
-        net = ipaddress.ip_network(spec, strict=False)
-        for ip in net.hosts():
-            targets.add(str(ip))
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                targets.extend(_expand_token(line))
     else:
-        ipaddress.ip_address(spec)  # validate
-        targets.add(spec)
+        targets.extend(_expand_token(spec))
 
-    return sorted(targets)
+    # Deduplicate preserving order
+    seen = set()
+    deduped = []
+    for ip in targets:
+        if ip not in seen:
+            seen.add(ip)
+            deduped.append(ip)
+    if not deduped:
+        raise ValueError(f"Unable to parse targets from: {spec}")
+    return deduped
 
 
-def probe_port(host: str, port: int, timeout: float = 1.0) -> bool:
+def _probe_port(host: str, port: int, timeout: float) -> bool:
     try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(timeout)
-            return s.connect_ex((host, port)) == 0
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
     except Exception:
         return False
 
@@ -53,24 +92,30 @@ def probe_port(host: str, port: int, timeout: float = 1.0) -> bool:
 def scan_host_ports(
     host: str,
     ports: Iterable[int],
-    timeout: float = 1.0,
-    max_workers: int = 200,
+    timeout: float = 1.5,
+    max_workers: int = 100,
     on_result: Optional[Callable[[int, bool], None]] = None,
 ) -> List[int]:
+    """
+    TCP connect-scan. Calls on_result(port, is_open) for each port if provided.
+    Returns sorted list of open ports.
+    """
+    ports_list = sorted(set(int(p) for p in ports if int(p) > 0))
     open_ports: List[int] = []
-    with ThreadPoolExecutor(max_workers=max_workers) as ex:
-        futs = {ex.submit(probe_port, host, p, timeout): p for p in ports}
-        for fut in as_completed(futs):
-            p = futs[fut]
+
+    def task(p: int) -> None:
+        is_open = _probe_port(host, p, timeout)
+        if is_open:
+            open_ports.append(p)
+        if on_result:
             try:
-                result = fut.result()
-                if on_result:
-                    try:
-                        on_result(p, result)
-                    except Exception:
-                        pass
-                if result:
-                    open_ports.append(p)
+                on_result(p, is_open)
             except Exception:
                 pass
+
+    # Limit concurrency per host
+    workers = max(1, min(max_workers, len(ports_list)))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as ex:
+        list(ex.map(task, ports_list))
+
     return sorted(open_ports)

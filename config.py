@@ -1,8 +1,9 @@
 # config.py
 # Central configuration for Cyberscanner
 
+from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Optional
 
 
 # Preset port profiles for convenience
@@ -23,21 +24,22 @@ PROFILES = {
 
 @dataclass
 class ScanConfig:
-    # Defaults you can tune
+    # Default ports (used if user doesn't pass --ports or --profile)
     default_ports: List[int] = field(default_factory=lambda: [22, 80, 443, 445, 3389, 8080, 8443, 3000])
 
     # Timeouts (seconds)
     connect_timeout: float = 1.5
     service_timeout: float = 1.5
     http_timeout: float = 2.5
+    tls_timeout: float = 3.0
 
-    # Concurrency/workers (global cap used by scanner)
+    # Concurrency (global cap used by scanner)
     max_workers: int = 100
 
-    # Report outputs; text/json usually auto-saved; html saved when user requests
+    # Report outputs; HTML is saved only if user passes --html
     save_text_path: str = "scan_report.txt"
     save_json_path: str = "scan_report.json"
-    save_html_path: str | None = None
+    save_html_path: Optional[str] = None
 
     # Version/meta (optional)
-    version: str = "2.1.0"
+    version: str = "2.2.0"

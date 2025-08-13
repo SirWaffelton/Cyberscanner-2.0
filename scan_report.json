@@ -1,4 +1,57 @@
 {
-  "generated_at": 1755026287,
-  "findings": []
+  "meta": {
+    "generated_utc": "2025-08-13T07:44:59.510796Z",
+    "tool": "Cyberscanner 2.2"
+  },
+  "hosts": [
+    {
+      "host": "192.168.1.254",
+      "open_ports": [
+        80,
+        443
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "host": "192.168.1.254",
+      "port": 443,
+      "category": "tls",
+      "issue": "Negotiated protocol: TLSv1.3",
+      "severity": "Info",
+      "recommendation": "Ensure TLS 1.2+ is used whenever possible."
+    },
+    {
+      "host": "192.168.1.254",
+      "port": 443,
+      "category": "tls",
+      "issue": "Server accepts TLS 1.0 (obsolete)",
+      "severity": "High",
+      "recommendation": "Disable TLS 1.0. Prefer TLS 1.2+"
+    },
+    {
+      "host": "192.168.1.254",
+      "port": 443,
+      "category": "tls",
+      "issue": "Server accepts TLS 1.1 (obsolete)",
+      "severity": "High",
+      "recommendation": "Disable TLS 1.1. Prefer TLS 1.2+"
+    },
+    {
+      "host": "192.168.1.254",
+      "port": 80,
+      "category": "web",
+      "issue": "Web service unreachable: ReadTimeout",
+      "severity": "Info",
+      "recommendation": "Ensure the service is reachable and not blocking requests."
+    },
+    {
+      "host": "192.168.1.254",
+      "port": 443,
+      "category": "web",
+      "issue": "Web service unreachable: ReadTimeout",
+      "severity": "Info",
+      "recommendation": "Ensure the service is reachable and not blocking requests."
+    }
+  ]
 }

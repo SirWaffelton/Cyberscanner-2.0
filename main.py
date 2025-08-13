@@ -1,6 +1,7 @@
 # main.py
 # CLI entrypoint: scanning, vuln checks, reporting
 
+from __future__ import annotations
 import argparse
 import os
 import re
@@ -85,9 +86,9 @@ def main():
         default=None,
     )
 
-    # Existing/common flags
+    # Common flags
     parser.add_argument("--ports", help="Comma-separated ports (default uses config)", default=None)
-    parser.add_argument("--timeout", type=float, help="Connect/service/HTTP timeout (seconds)", default=None)
+    parser.add_argument("--timeout", type=float, help="Connect/service/HTTP/TLS timeout (seconds)", default=None)
     parser.add_argument("--ui", action="store_true", help="Enable interactive terminal UI")
     parser.add_argument("--no-color", action="store_true", help="Disable colorized output")
     parser.add_argument("--html", help="Also save an HTML report to this path", default=None)
@@ -115,6 +116,7 @@ def main():
         cfg.connect_timeout = float(args.timeout)
         cfg.service_timeout = float(args.timeout)
         cfg.http_timeout = float(args.timeout)
+        cfg.tls_timeout = float(args.timeout)
 
     # HTML path override
     if args.html:
@@ -171,7 +173,7 @@ def main():
         print("UI requested but 'rich' or ui module unavailable. Install with: pip install rich")
 
     if use_ui:
-        ui = ProgressUI(total_hosts=len(targets), total_ports=len(ports) * len(targets))
+        ui = ProgressUI(total_hosts=len(targets), total_ports=len(ports) * len(targets)) # type: ignore
         ui.start()
 
     # Scan + vuln checks
@@ -211,7 +213,13 @@ def main():
             if use_ui and ui:
                 ui.on_finding(host, f)
 
-        findings = run_vuln_checks(host, open_ports, cfg, on_progress=_stage_cb, on_finding=_finding_cb)
+        findings = run_vuln_checks(
+            host,
+            open_ports,
+            cfg,
+            on_progress=_stage_cb,
+            on_finding=_finding_cb
+        )
         for f in findings:
             reporter.add_finding(**f)
 
