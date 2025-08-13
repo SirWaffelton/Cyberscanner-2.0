@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-
 # Preset port profiles for convenience
 PROFILES = {
     # Focused on web and common alt ports
@@ -20,7 +19,6 @@ PROFILES = {
         135, 139, 143, 389, 443, 445, 3389, 5000, 8080, 8443
     ],
 }
-
 
 @dataclass
 class ScanConfig:
@@ -42,4 +40,4 @@ class ScanConfig:
     save_html_path: Optional[str] = None
 
     # Version/meta (optional)
-    version: str = "2.2.0"
+    version: str = "2.3.0"

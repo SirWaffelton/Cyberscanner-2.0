@@ -1,5 +1,5 @@
 # main.py
-# CLI entrypoint: scanning, vuln checks, reporting
+# CLI entrypoint: discovery, scanning, vuln checks, reporting
 
 from __future__ import annotations
 import argparse
@@ -15,6 +15,7 @@ from config import ScanConfig, PROFILES
 from reporter import Reporter
 from scanner import parse_targets, scan_host_ports
 from vuln_tester import run_vuln_checks
+from discovery import discover_live_hosts
 
 # Optional UI
 try:
@@ -64,7 +65,7 @@ def expand_web_ports_if_requested(ports: List[int], enabled: bool) -> List[int]:
 
 
 def apply_exclusions(targets: List[str], exclude_spec: str) -> List[str]:
-    """Exclude IPs/ranges/CIDRs using same parser for consistency."""
+    """Exclude IPs/ranges/CIDRs using the same parser for consistency."""
     excluded = set()
     for token in exclude_spec.split(","):
         token = token.strip()
@@ -76,7 +77,7 @@ def apply_exclusions(targets: List[str], exclude_spec: str) -> List[str]:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Network scanner + vulnerability checks")
+    parser = argparse.ArgumentParser(description="Cyberscanner — discovery, port scan, and vulnerability checks")
 
     # Positional
     parser.add_argument(
@@ -92,6 +93,7 @@ def main():
     parser.add_argument("--ui", action="store_true", help="Enable interactive terminal UI")
     parser.add_argument("--no-color", action="store_true", help="Disable colorized output")
     parser.add_argument("--html", help="Also save an HTML report to this path", default=None)
+    parser.add_argument("--csv", help="Also save a CSV findings report to this path", default=None)
 
     # New capabilities
     parser.add_argument("--profile", choices=list(PROFILES.keys()), help="Use a preset port profile", default=None)
@@ -99,6 +101,7 @@ def main():
     parser.add_argument("--skip-self", action="store_true", help="Skip local IPv4 address(es)")
     parser.add_argument("--rate", choices=["slow", "normal", "fast"], default=None, help="Adjust concurrency via max_workers")
     parser.add_argument("--expand-web-ports", action="store_true", help="Auto-add 8080 if 80 and 8443 if 443 are selected")
+    parser.add_argument("--discover", choices=["none", "ping", "arp", "auto"], default="none", help="Host discovery mode to pre-filter live hosts")
 
     args = parser.parse_args()
 
@@ -118,7 +121,7 @@ def main():
         cfg.http_timeout = float(args.timeout)
         cfg.tls_timeout = float(args.timeout)
 
-    # HTML path override
+    # HTML/CSV overrides
     if args.html:
         cfg.save_html_path = args.html
 
@@ -166,6 +169,16 @@ def main():
         print("No targets to scan after applying filters.")
         sys.exit(0)
 
+    # Discovery phase (optional)
+    if args.discover != "none":
+        print(f"Discovering live hosts using mode: {args.discover} ...")
+        targets = discover_live_hosts(targets, mode=args.discover, timeout_ms=int(cfg.connect_timeout * 1000))
+        if not targets:
+            print("No live hosts discovered. Use --discover none to force scanning anyway.")
+            sys.exit(0)
+        else:
+            print(f"Live hosts: {len(targets)}")
+
     # UI setup
     use_ui = bool(args.ui and ProgressUI is not None)
     ui = None
@@ -173,8 +186,18 @@ def main():
         print("UI requested but 'rich' or ui module unavailable. Install with: pip install rich")
 
     if use_ui:
-        ui = ProgressUI(total_hosts=len(targets), total_ports=len(ports) * len(targets)) # type: ignore
+        ui = ProgressUI(total_hosts=len(targets), total_ports=len(ports) * len(targets))
         ui.start()
+
+    # Meta shown in reports
+    reporter.set_meta({
+        "targets_spec": args.targets,
+        "profile": args.profile,
+        "ports": ports,
+        "discover": args.discover,
+        "timeout": cfg.connect_timeout,
+        "max_workers": cfg.max_workers,
+    })
 
     # Scan + vuln checks
     for host in targets:
@@ -230,6 +253,7 @@ def main():
     text_out = reporter.to_text()
     print(text_out)
 
+    # Ensure parent dirs for outputs
     if cfg.save_text_path:
         ensure_parent_dir(cfg.save_text_path)
         reporter.save_text(cfg.save_text_path)
@@ -239,11 +263,15 @@ def main():
     if cfg.save_html_path:
         ensure_parent_dir(cfg.save_html_path)
         reporter.save_html(cfg.save_html_path)
+    if args.csv:
+        ensure_parent_dir(args.csv)
+        reporter.save_csv(args.csv)
 
     saved = []
     if cfg.save_text_path: saved.append(cfg.save_text_path)
     if cfg.save_json_path: saved.append(cfg.save_json_path)
     if cfg.save_html_path: saved.append(cfg.save_html_path)
+    if args.csv: saved.append(args.csv)
     if saved:
         print("Reports saved as " + " and ".join(saved))
     print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Network scan and vulnerability test performed on {args.targets}")

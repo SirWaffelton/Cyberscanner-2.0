@@ -7,7 +7,6 @@ import socket
 import ssl
 from typing import Dict, List, Tuple
 
-
 def _finding(host: str, port: int, issue: str, severity: str, rec: str = "") -> Dict:
     return {
         "host": host,
@@ -18,7 +17,6 @@ def _finding(host: str, port: int, issue: str, severity: str, rec: str = "") -> 
         "recommendation": rec,
     }
 
-
 def _parse_cert_dates(cert: dict) -> Tuple[_dt.datetime, _dt.datetime]:
     # notBefore/After are ASN.1 time strings like 'Jun  1 12:00:00 2024 GMT'
     def _parse(s: str) -> _dt.datetime:
@@ -27,25 +25,7 @@ def _parse_cert_dates(cert: dict) -> Tuple[_dt.datetime, _dt.datetime]:
     not_after = _parse(cert["notAfter"])
     return not_before, not_after
 
-
-def _host_in_cert(cert: dict, host: str) -> bool:
-    # Check SAN first
-    san = cert.get("subjectAltName", [])
-    for typ, val in san:
-        if typ.lower() == "dns":
-            if _dns_match(val, host):
-                return True
-    # Fallback to CN
-    for tup in cert.get("subject", []):
-        for k, v in tup:
-            if k == "commonName":
-                if _dns_match(v, host):
-                    return True
-    return False
-
-
 def _dns_match(pattern: str, host: str) -> bool:
-    # Very simple wildcard support: *.example.com
     pattern = pattern.lower()
     host = host.lower()
     if pattern == host:
@@ -54,6 +34,18 @@ def _dns_match(pattern: str, host: str) -> bool:
         return host.endswith(pattern[1:]) and host.count(".") >= pattern.count(".")
     return False
 
+def _host_in_cert(cert: dict, host: str) -> bool:
+    # Check SAN first
+    san = cert.get("subjectAltName", [])
+    for typ, val in san:
+        if typ.lower() == "dns" and _dns_match(val, host):
+            return True
+    # Fallback to CN
+    for tup in cert.get("subject", []):
+        for k, v in tup:
+            if k == "commonName" and _dns_match(v, host):
+                return True
+    return False
 
 def _supports_legacy_tls(host: str, port: int, timeout: float, version: ssl.TLSVersion) -> bool:
     """
@@ -72,7 +64,6 @@ def _supports_legacy_tls(host: str, port: int, timeout: float, version: ssl.TLSV
     except Exception:
         return False
 
-
 def check_tls(host: str, port: int, timeout: float = 3.0) -> List[Dict]:
     findings: List[Dict] = []
 
@@ -84,7 +75,7 @@ def check_tls(host: str, port: int, timeout: float = 3.0) -> List[Dict]:
         with socket.create_connection((host, port), timeout=timeout) as raw:
             with ctx.wrap_socket(raw, server_hostname=host) as s:
                 cert = s.getpeercert()
-                proto = getattr(s, "version", lambda: "TLS")( )
+                proto = s.version() if hasattr(s, "version") else "TLS"
                 if cert:
                     # Dates
                     nb, na = _parse_cert_dates(cert)
@@ -112,7 +103,6 @@ def check_tls(host: str, port: int, timeout: float = 3.0) -> List[Dict]:
         if _supports_legacy_tls(host, port, timeout, ssl.TLSVersion.TLSv1_1):
             findings.append(_finding(host, port, "Server accepts TLS 1.1 (obsolete)", "High", "Disable TLS 1.1. Prefer TLS 1.2+"))
     except Exception:
-        # Older Python may not expose TLSVersion; skip quietly
         pass
 
     return findings

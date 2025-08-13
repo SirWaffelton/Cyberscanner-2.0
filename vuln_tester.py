@@ -7,11 +7,13 @@ from typing import Callable, Dict, List, Optional
 from config import ScanConfig
 from web_checks import check_http
 from tls_checks import check_tls
-
+from smb_checks import check_smb
+from rdp_checks import check_rdp
 
 HTTP_PORTS = {80, 8080, 8000, 3000, 5000}
 HTTPS_PORTS = {443, 8443, 4443, 9443}
-
+SMB_PORTS = {445, 139}
+RDP_PORTS = {3389}
 
 def run_vuln_checks(
     host: str,
@@ -56,7 +58,16 @@ def run_vuln_checks(
             scheme = "https" if p in HTTPS_PORTS else "http"
             add_findings(check_http(host, p, scheme=scheme, timeout=cfg.http_timeout))
 
-    # Placeholder for future service-specific checks (e.g., SMB, RDP)
-    # emit("service")
+    # SMB checks
+    smb_ports = sorted([p for p in open_ports if p in SMB_PORTS])
+    if smb_ports:
+        emit("smb")
+        add_findings(check_smb(host, smb_ports, timeout=cfg.service_timeout))
+
+    # RDP checks
+    rdp_ports = sorted([p for p in open_ports if p in RDP_PORTS])
+    if rdp_ports:
+        emit("rdp")
+        add_findings(check_rdp(host, rdp_ports, timeout=cfg.service_timeout))
 
     return findings

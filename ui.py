@@ -13,7 +13,6 @@ try:
 except Exception:  # pragma: no cover
     Live = None  # type: ignore
 
-
 class ProgressUI:
     def __init__(self, total_hosts: int, total_ports: int):
         self.total_hosts = total_hosts
@@ -37,7 +36,6 @@ class ProgressUI:
             self._live = None
 
     def stop_requested(self) -> bool:
-        # Hook for future keyboard interrupt handling
         return False
 
     def on_host_started(self, host: str):
@@ -55,7 +53,6 @@ class ProgressUI:
         self._refresh()
 
     def on_check(self, host: str, stage: str):
-        # stage: "tls" or "web" etc.
         self._refresh()
 
     def on_finding(self, host: str, f: Dict[str, Any]):

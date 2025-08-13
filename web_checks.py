@@ -2,8 +2,7 @@
 # Simple HTTP/HTTPS hygiene checks
 
 from __future__ import annotations
-import socket
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import requests
 from requests.exceptions import RequestException
@@ -15,16 +14,13 @@ try:
 except Exception:
     pass
 
-
 WANTED_HEADERS = [
     "X-Content-Type-Options",
     "X-Frame-Options",
     "Content-Security-Policy",
     "Referrer-Policy",
-    # For HTTPS only
-    # "Strict-Transport-Security",
+    # For HTTPS only (added dynamically): "Strict-Transport-Security",
 ]
-
 
 def _finding(host: str, port: int, category: str, issue: str, severity: str, rec: str = "") -> Dict:
     return {
@@ -35,7 +31,6 @@ def _finding(host: str, port: int, category: str, issue: str, severity: str, rec
         "severity": severity,
         "recommendation": rec,
     }
-
 
 def check_http(host: str, port: int, scheme: str = "http", timeout: float = 2.5) -> List[Dict]:
     """
@@ -53,13 +48,13 @@ def check_http(host: str, port: int, scheme: str = "http", timeout: float = 2.5)
         findings.append(_finding(host, port, "web", issue, "Info", "Ensure the service is reachable and not blocking requests."))
         return findings
 
-    # Basic status code handling
+    # Status codes
     if resp.status_code >= 500:
         findings.append(_finding(host, port, "web", f"HTTP {resp.status_code} (server error)", "Low", "Check server/application logs."))
     elif resp.status_code >= 400:
         findings.append(_finding(host, port, "web", f"HTTP {resp.status_code} (client error)", "Info", "May be expected; verify access paths."))
 
-    # Redirect behavior
+    # Redirects
     if len(resp.history) > 0:
         first = resp.history[0]
         findings.append(_finding(host, port, "web", f"Redirects {first.status_code} -> {resp.status_code}", "Info", "Ensure redirects enforce HTTPS where applicable."))
@@ -67,7 +62,7 @@ def check_http(host: str, port: int, scheme: str = "http", timeout: float = 2.5)
     # Header hygiene
     wanted = list(WANTED_HEADERS)
     if scheme == "https":
-        wanted = wanted + ["Strict-Transport-Security"]
+        wanted.append("Strict-Transport-Security")
     missing = [h for h in wanted if h not in resp.headers]
     if missing:
         sev = "Medium" if scheme == "https" or "Content-Security-Policy" in missing else "Low"
@@ -79,7 +74,7 @@ def check_http(host: str, port: int, scheme: str = "http", timeout: float = 2.5)
     if server:
         findings.append(_finding(host, port, "web", f"Server banner: {server}", "Info", "Avoid disclosing detailed version info when possible."))
 
-    # Mixed-content hint: if HTTPS final URL serves http links (basic heuristic)
+    # Mixed-content heuristic
     if scheme == "https":
         body_sample = resp.text[:5000]
         if "http://" in body_sample:

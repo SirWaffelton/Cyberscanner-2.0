@@ -8,7 +8,6 @@ import os
 import socket
 from typing import Callable, Iterable, List, Optional
 
-
 def _expand_range_token(token: str) -> List[str]:
     # Supports a.b.c.start-end (e.g., 192.168.1.10-20)
     try:
@@ -22,7 +21,6 @@ def _expand_range_token(token: str) -> List[str]:
         return [f"{base}{i}" for i in range(start, end + 1)]
     except Exception:
         return []
-
 
 def _expand_token(token: str) -> List[str]:
     token = token.strip()
@@ -45,7 +43,6 @@ def _expand_token(token: str) -> List[str]:
     except Exception:
         pass
     return []
-
 
 def parse_targets(spec: str) -> List[str]:
     """
@@ -80,14 +77,12 @@ def parse_targets(spec: str) -> List[str]:
         raise ValueError(f"Unable to parse targets from: {spec}")
     return deduped
 
-
 def _probe_port(host: str, port: int, timeout: float) -> bool:
     try:
         with socket.create_connection((host, port), timeout=timeout):
             return True
     except Exception:
         return False
-
 
 def scan_host_ports(
     host: str,
@@ -113,7 +108,6 @@ def scan_host_ports(
             except Exception:
                 pass
 
-    # Limit concurrency per host
     workers = max(1, min(max_workers, len(ports_list)))
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as ex:
         list(ex.map(task, ports_list))

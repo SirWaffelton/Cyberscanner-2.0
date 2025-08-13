@@ -1,29 +1,28 @@
 # reporter.py
-# Handles report aggregation and saving in text, JSON, and HTML formats
+# Handles report aggregation and saving in text, JSON, HTML, and CSV formats
 
 from __future__ import annotations
+import csv
 import json
 import os
 from datetime import datetime
-from typing import Any, Dict, List
-
+from typing import Any, Dict, List, Optional
 
 def _ensure_parent(path: str):
     parent = os.path.dirname(os.path.abspath(path))
     if parent and not os.path.exists(parent):
         os.makedirs(parent, exist_ok=True)
 
-
 class Reporter:
     def __init__(self, colorize: bool = True):
         self.colorize = colorize
-        # Findings are dicts like:
-        # { "host": "192.168.1.254", "port": 443, "category": "web|tls|service",
-        #   "issue": "Missing X-Frame-Options", "severity": "Medium",
-        #   "recommendation": "Add X-Frame-Options: DENY or SAMEORIGIN" }
         self.findings: List[Dict[str, Any]] = []
         self.host_open_ports: Dict[str, List[int]] = {}
         self.started_at = datetime.utcnow()
+        self.meta: Dict[str, Any] = {}
+
+    def set_meta(self, meta: Dict[str, Any]):
+        self.meta = meta or {}
 
     def add_finding(self, **finding: Any):
         self.findings.append(finding)
@@ -33,8 +32,10 @@ class Reporter:
 
     def to_text(self) -> str:
         lines: List[str] = []
-        lines.append(f"== Cyberscanner Report ==")
+        lines.append("== Cyberscanner Report ==")
         lines.append(f"Generated (UTC): {self.started_at.isoformat()}Z")
+        if self.meta:
+            lines.append(f"Meta: {self.meta}")
         lines.append("")
 
         if self.host_open_ports:
@@ -65,7 +66,8 @@ class Reporter:
         doc = {
             "meta": {
                 "generated_utc": self.started_at.isoformat() + "Z",
-                "tool": "Cyberscanner 2.2",
+                "tool": "Cyberscanner 2.3",
+                **self.meta,
             },
             "hosts": [
                 {"host": host, "open_ports": ports}
@@ -93,6 +95,8 @@ class Reporter:
         html.append(f"<style>{css}</style></head><body>")
         html.append("<h1>Cyberscanner Report</h1>")
         html.append(f"<div class='sub'>Generated (UTC): {self.started_at.isoformat()}Z</div>")
+        if self.meta:
+            html.append(f"<div class='sub'>Meta: {self.meta}</div>")
 
         if self.host_open_ports:
             html.append("<h2>Open Ports by Host</h2>")
@@ -138,3 +142,19 @@ class Reporter:
         _ensure_parent(path)
         with open(path, "w", encoding="utf-8") as f:
             f.write(self.to_html())
+
+    def save_csv(self, path: str):
+        _ensure_parent(path)
+        headers = ["severity", "host", "port", "category", "issue", "recommendation"]
+        with open(path, "w", encoding="utf-8", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(headers)
+            for it in self.findings:
+                w.writerow([
+                    it.get("severity", "Info"),
+                    it.get("host", ""),
+                    it.get("port", ""),
+                    it.get("category", "general"),
+                    it.get("issue", ""),
+                    it.get("recommendation", ""),
+                ])
